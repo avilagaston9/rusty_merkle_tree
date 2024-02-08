@@ -1,0 +1,6 @@
+
+/merkkle_tree/target/
+
+merkle_tree/Cargo.lock
+
+merkkle_tree/**/*.rs.bk
