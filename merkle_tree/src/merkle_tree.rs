@@ -7,8 +7,6 @@ use crypto::sha3::Sha3;
 pub enum CreationError {
     // Empty input array
     Empty,
-    // Incorrect number of fields
-    NotPowerOfTwo,
 }
 
 #[derive(Debug, PartialEq)]
@@ -20,21 +18,15 @@ impl MerkleTree {
         if array.is_empty() {
             return Err(CreationError::Empty);
         }
-        let len = array.len();
-        if (len & (len - 1)) != 0 {
-            return Err(CreationError::NotPowerOfTwo);
-        }
-
         let leaves = Self::get_leaves(&array);
-
         Ok(MerkleTree { leaves })
     }
 
     pub fn get_root(&self) -> String { Self::calculate_root(&self.leaves)}
+    pub fn count_leaves(&self) -> usize { self.leaves.len()}
 
     fn get_leaves(array: &[String]) -> Vec<String> {
-        
-        let hashes: Vec<String> = array
+        let mut hashes: Vec<String> = array
         .iter()
         .map(|elem| {
                 let mut hasher = Sha3::keccak256();
@@ -43,6 +35,12 @@ impl MerkleTree {
             })
             .collect();
 
+        let mut len = hashes.len();
+        while (len & (len - 1)) != 0 {
+            hashes.push(hashes.last().unwrap().clone());
+            len = hashes.len();
+        }
+    
         hashes
     }
 
@@ -74,24 +72,21 @@ mod tests {
         assert_eq![tree, Err(CreationError::Empty)];
     }
     #[test]
-    fn build_from_two_elements_is_ok() {
-        let tree = MerkleTree::build_from(vec!["foo".into(), "bar".into()]);
+    fn build_from_one_element_is_ok() {
+        let tree = MerkleTree::build_from(vec!["foo".into()]);
         assert!(tree.is_ok());
+        let tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 1];
     }
     #[test]
-    fn build_from_two_elements_root_is_ok() {
-        let tree = MerkleTree::build_from(vec!["foo".into(), "bar".into()]);
+    fn build_from_one_element_root_is_ok() {
+        let tree = MerkleTree::build_from(vec!["foo".into()]);
         let mut hasher = Sha3::keccak256();
         hasher.input("foo".to_string().as_bytes());
-        let hash1 = hasher.result_str();
-        let mut hasher = Sha3::keccak256();
-        hasher.input("bar".to_string().as_bytes());
-        let hash2 = hasher.result_str();
-        let mut hasher = Sha3::keccak256();
-        hasher.input((hash1 + hash2.as_str()).as_bytes());
         let root = hasher.result_str();
-
-        assert_eq![tree.unwrap().get_root(), root];
+        let tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 1];
+        assert_eq![tree.get_root(), root];
     }
 
     #[test]
@@ -129,10 +124,53 @@ mod tests {
         hasher.input((root1 + root2.as_str()).as_bytes());
         let root = hasher.result_str();
 
-        println!("{root}");
         assert!(tree.is_ok());
-
-        assert_eq![tree.unwrap().get_root(), root];
+        let tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 4];
+        assert_eq![tree.get_root(), root];
         
+    }
+    #[test]
+    fn build_from_three_elements_root_is_ok() {
+        let tree = MerkleTree::build_from(vec!["foo".into(), "bar".into(), "hello".into()]);
+        //manually get the hashes of all inputs
+        let mut hasher = Sha3::keccak256();
+        hasher.input("foo".to_string().as_bytes());
+        let hash1 = hasher.result_str();
+
+        let mut hasher = Sha3::keccak256();
+        hasher.input("bar".to_string().as_bytes());
+        let hash2 = hasher.result_str();
+
+        let mut hasher = Sha3::keccak256();
+        hasher.input("hello".to_string().as_bytes());
+        let hash3 = hasher.result_str();
+
+        //manually get the hashes of the parents
+        let mut hasher = Sha3::keccak256();
+        hasher.input((hash1 + hash2.as_str()).as_bytes());
+        let root1 = hasher.result_str();
+
+        let mut hasher = Sha3::keccak256();
+        hasher.input((hash3.clone() + hash3.as_str()).as_bytes());
+        let root2 = hasher.result_str();
+
+        //manually get the root
+        let mut hasher = Sha3::keccak256();
+        hasher.input((root1 + root2.as_str()).as_bytes());
+        let root = hasher.result_str();
+
+        assert!(tree.is_ok());
+        let tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 4];
+        assert_eq![tree.get_root(), root];
+    }
+    #[test]
+    fn build_from_five_elements_goes_to_eight() {
+        let tree = MerkleTree::build_from(vec!["1".into(), "2".into(), "3".into(), "4".into(), "5".into()]);
+
+        assert!(tree.is_ok());
+        let tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 8];
     }
 }
