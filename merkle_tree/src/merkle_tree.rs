@@ -18,15 +18,22 @@ impl MerkleTree {
         if array.is_empty() {
             return Err(CreationError::Empty);
         }
-        let leaves = Self::get_leaves(&array);
+        let mut leaves = Self::get_leaves(&array);
+        Self::fix_size(&mut leaves);
         Ok(MerkleTree { leaves })
     }
 
     pub fn get_root(&self) -> String { Self::calculate_root(&self.leaves)}
     pub fn count_leaves(&self) -> usize { self.leaves.len()}
+    pub fn add_leaves(&mut self, mut new_leaves: Vec<String>) -> bool {
+        let new_leaves = Self::get_leaves(&mut new_leaves);
+        self.leaves.extend(new_leaves);
+        Self::fix_size(&mut self.leaves);
+        true
+    }
 
     fn get_leaves(array: &[String]) -> Vec<String> {
-        let mut hashes: Vec<String> = array
+        let hashes: Vec<String> = array
         .iter()
         .map(|elem| {
                 let mut hasher = Sha3::keccak256();
@@ -34,14 +41,16 @@ impl MerkleTree {
                 hasher.result_str().to_string()
             })
             .collect();
-
-        let mut len = hashes.len();
-        while (len & (len - 1)) != 0 {
-            hashes.push(hashes.last().unwrap().clone());
-            len = hashes.len();
-        }
     
         hashes
+    }
+
+    fn fix_size(leaves: &mut Vec<String>) {
+        let mut len = leaves.len();
+        while (len & (len - 1)) != 0 {
+            leaves.push(leaves.last().unwrap().clone());
+            len = leaves.len();
+        }
     }
 
     fn calculate_root(array: &[String]) -> String {
