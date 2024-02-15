@@ -22,26 +22,39 @@ impl MerkleTree {
         Ok(MerkleTree { leaves })
     }
 
-    pub fn get_root(&self) -> String { Self::calculate_root(&self.leaves)}
-    pub fn count_leaves(&self) -> usize { self.leaves.len()}
+    pub fn get_root(&self) -> String {
+        Self::calculate_root(&Self::resize_leaves(&self.leaves))
+    }
+    pub fn count_leaves(&self) -> usize {
+        self.leaves.len()
+    }
+
+    pub fn add_leaves(&mut self, new_leaves: Vec<String>) {
+        let new_leaves = Self::get_leaves(&new_leaves);
+        self.leaves.extend(new_leaves);
+    }
 
     fn get_leaves(array: &[String]) -> Vec<String> {
-        let mut hashes: Vec<String> = array
-        .iter()
-        .map(|elem| {
+        let hashes: Vec<String> = array
+            .iter()
+            .map(|elem| {
                 let mut hasher = Sha3::keccak256();
                 hasher.input(elem.as_bytes());
                 hasher.result_str().to_string()
             })
             .collect();
 
-        let mut len = hashes.len();
-        while (len & (len - 1)) != 0 {
-            hashes.push(hashes.last().unwrap().clone());
-            len = hashes.len();
-        }
-    
         hashes
+    }
+
+    fn resize_leaves(leaves: &[String]) -> Vec<String> {
+        let mut resized_leaves = leaves.to_owned();
+        let mut len = resized_leaves.len();
+        while (len & (len - 1)) != 0 {
+            resized_leaves.push(resized_leaves.last().unwrap().clone());
+            len = resized_leaves.len();
+        }
+        resized_leaves
     }
 
     fn calculate_root(array: &[String]) -> String {
@@ -50,7 +63,7 @@ impl MerkleTree {
         }
 
         let mut parents_array = vec![];
-        
+
         for chunk in array.chunks(2) {
             let mut hasher = Sha3::keccak256();
             hasher.input((chunk[0].to_string() + chunk[1].as_str()).as_bytes());
@@ -91,16 +104,21 @@ mod tests {
 
     #[test]
     fn build_from_four_elements_root_is_ok() {
-        let tree = MerkleTree::build_from(vec!["foo".into(), "bar".into(), "hello".into(), "world!".into()]);
+        let tree = MerkleTree::build_from(vec![
+            "foo".into(),
+            "bar".into(),
+            "hello".into(),
+            "world!".into(),
+        ]);
 
         //manually get the hashes of all inputs
         let mut hasher = Sha3::keccak256();
         hasher.input("foo".to_string().as_bytes());
-        let hash1 = hasher.result_str();
+        let foo_hash = hasher.result_str();
 
         let mut hasher = Sha3::keccak256();
         hasher.input("bar".to_string().as_bytes());
-        let hash2 = hasher.result_str();
+        let bar_hash = hasher.result_str();
 
         let mut hasher = Sha3::keccak256();
         hasher.input("hello".to_string().as_bytes());
@@ -112,7 +130,7 @@ mod tests {
 
         //manually get the hashes of the parents
         let mut hasher = Sha3::keccak256();
-        hasher.input((hash1 + hash2.as_str()).as_bytes());
+        hasher.input((foo_hash + bar_hash.as_str()).as_bytes());
         let root1 = hasher.result_str();
 
         let mut hasher = Sha3::keccak256();
@@ -128,7 +146,6 @@ mod tests {
         let tree = tree.unwrap();
         assert_eq![tree.count_leaves(), 4];
         assert_eq![tree.get_root(), root];
-        
     }
     #[test]
     fn build_from_three_elements_root_is_ok() {
@@ -136,11 +153,11 @@ mod tests {
         //manually get the hashes of all inputs
         let mut hasher = Sha3::keccak256();
         hasher.input("foo".to_string().as_bytes());
-        let hash1 = hasher.result_str();
+        let foo_hash = hasher.result_str();
 
         let mut hasher = Sha3::keccak256();
         hasher.input("bar".to_string().as_bytes());
-        let hash2 = hasher.result_str();
+        let bar_hash = hasher.result_str();
 
         let mut hasher = Sha3::keccak256();
         hasher.input("hello".to_string().as_bytes());
@@ -148,7 +165,7 @@ mod tests {
 
         //manually get the hashes of the parents
         let mut hasher = Sha3::keccak256();
-        hasher.input((hash1 + hash2.as_str()).as_bytes());
+        hasher.input((foo_hash + bar_hash.as_str()).as_bytes());
         let root1 = hasher.result_str();
 
         let mut hasher = Sha3::keccak256();
@@ -162,15 +179,91 @@ mod tests {
 
         assert!(tree.is_ok());
         let tree = tree.unwrap();
-        assert_eq![tree.count_leaves(), 4];
+        assert_eq![tree.count_leaves(), 3];
         assert_eq![tree.get_root(), root];
     }
     #[test]
-    fn build_from_five_elements_goes_to_eight() {
-        let tree = MerkleTree::build_from(vec!["1".into(), "2".into(), "3".into(), "4".into(), "5".into()]);
+    fn build_from_one_element_adds_two() {
+        //manually get the hashes of all inputs
+        let mut hasher = Sha3::keccak256();
+        hasher.input("foo".to_string().as_bytes());
+        let foo_hash = hasher.result_str();
+        
+        let mut hasher = Sha3::keccak256();
+        hasher.input("bar".to_string().as_bytes());
+        let bar_hash = hasher.result_str();
+        
+        let mut hasher = Sha3::keccak256();
+        hasher.input("hello".to_string().as_bytes());
+        let hash3 = hasher.result_str();
+        
+        //manually get the hashes of the parents
+        let mut hasher = Sha3::keccak256();
+        hasher.input((foo_hash.clone() + bar_hash.as_str()).as_bytes());
+        let root1 = hasher.result_str();
+        
+        let mut hasher = Sha3::keccak256();
+        hasher.input((hash3.clone() + hash3.as_str()).as_bytes());
+        let root2 = hasher.result_str();
+        
+        //manually get the final root
+        let mut hasher = Sha3::keccak256();
+        hasher.input((root1 + root2.as_str()).as_bytes());
+        let root = hasher.result_str();
+        
+        let tree = MerkleTree::build_from(vec!["foo".into()]);
+        let mut tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 1];
+        assert_eq![tree.get_root(), foo_hash];
+        tree.add_leaves(vec!["bar".into(), "hello".into()]);
 
-        assert!(tree.is_ok());
-        let tree = tree.unwrap();
-        assert_eq![tree.count_leaves(), 8];
+        assert_eq![tree.count_leaves(), 3];
+        assert_eq![tree.get_root(), root];
+    }
+    #[test]
+    fn build_from_one_element_two_inserts() {
+        //manually get the hashes of all inputs
+        let mut hasher = Sha3::keccak256();
+        hasher.input("foo".to_string().as_bytes());
+        let foo_hash = hasher.result_str();
+        
+        let mut hasher = Sha3::keccak256();
+        hasher.input("bar".to_string().as_bytes());
+        let bar_hash = hasher.result_str();
+        
+        let mut hasher = Sha3::keccak256();
+        hasher.input("hello".to_string().as_bytes());
+        let hash3 = hasher.result_str();
+        
+        //manually get the hashes of the parents
+        let mut hasher = Sha3::keccak256();
+        hasher.input((foo_hash.clone() + bar_hash.as_str()).as_bytes());
+        let root1 = hasher.result_str();
+        
+        let mut hasher = Sha3::keccak256();
+        hasher.input((hash3.clone() + hash3.as_str()).as_bytes());
+        let root2 = hasher.result_str();
+        
+        //manually get the final root
+        let mut hasher = Sha3::keccak256();
+        hasher.input((root1.clone() + root2.as_str()).as_bytes());
+        let root = hasher.result_str();
+        
+        let tree = MerkleTree::build_from(vec!["foo".into()]);
+        let mut tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 1];
+        assert_eq![tree.get_root(), foo_hash];
+
+        //first insert
+        tree.add_leaves(vec!["bar".into()]);
+
+        assert_eq![tree.count_leaves(), 2];
+        assert_eq![tree.get_root(), root1];
+
+        //second insert
+        tree.add_leaves(vec!["hello".into()]);
+
+        assert_eq![tree.count_leaves(), 3];
+        assert_eq![tree.get_root(), root];
     }
 }
