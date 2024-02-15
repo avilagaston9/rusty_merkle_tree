@@ -37,11 +37,7 @@ impl MerkleTree {
     fn get_leaves(array: &[String]) -> Vec<String> {
         let hashes: Vec<String> = array
             .iter()
-            .map(|elem| {
-                let mut hasher = Sha3::keccak256();
-                hasher.input(elem.as_bytes());
-                hasher.result_str().to_string()
-            })
+            .map(|elem| Self::calculate_hash(elem))
             .collect();
 
         hashes
@@ -65,12 +61,18 @@ impl MerkleTree {
         let mut parents_array = vec![];
 
         for chunk in array.chunks(2) {
-            let mut hasher = Sha3::keccak256();
-            hasher.input((chunk[0].to_string() + chunk[1].as_str()).as_bytes());
-            parents_array.push(hasher.result_str().to_string());
+            parents_array.push(Self::calculate_hash(
+                (chunk[0].to_string() + chunk[1].as_str()).as_str(),
+            ));
         }
 
         Self::calculate_root(&parents_array)
+    }
+
+    fn calculate_hash(input: &str) -> String {
+        let mut hasher = Sha3::keccak256();
+        hasher.input(input.to_string().as_bytes());
+        hasher.result_str()
     }
 }
 
