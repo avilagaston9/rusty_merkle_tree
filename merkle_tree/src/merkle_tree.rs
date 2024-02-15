@@ -18,18 +18,16 @@ impl MerkleTree {
         if array.is_empty() {
             return Err(CreationError::Empty);
         }
-        let mut leaves = Self::get_leaves(&array);
-        Self::fix_size(&mut leaves);
+        let leaves = Self::get_leaves(&array);
         Ok(MerkleTree { leaves })
     }
 
-    pub fn get_root(&self) -> String { Self::calculate_root(&self.leaves)}
+    pub fn get_root(&self) -> String { Self::calculate_root(&Self::resize_leaves(&self.leaves))}
     pub fn count_leaves(&self) -> usize { self.leaves.len()}
-    pub fn add_leaves(&mut self, mut new_leaves: Vec<String>) -> bool {
+
+    pub fn add_leaves(&mut self, mut new_leaves: Vec<String>) {
         let new_leaves = Self::get_leaves(&mut new_leaves);
         self.leaves.extend(new_leaves);
-        Self::fix_size(&mut self.leaves);
-        true
     }
 
     fn get_leaves(array: &[String]) -> Vec<String> {
@@ -45,12 +43,14 @@ impl MerkleTree {
         hashes
     }
 
-    fn fix_size(leaves: &mut Vec<String>) {
-        let mut len = leaves.len();
+    fn resize_leaves(leaves: &Vec<String>) -> Vec<String>{
+        let mut resized_leaves = leaves.clone();
+        let mut len = resized_leaves.len();
         while (len & (len - 1)) != 0 {
-            leaves.push(leaves.last().unwrap().clone());
-            len = leaves.len();
+            resized_leaves.push(resized_leaves.last().unwrap().clone());
+            len = resized_leaves.len();
         }
+        resized_leaves
     }
 
     fn calculate_root(array: &[String]) -> String {
@@ -171,15 +171,7 @@ mod tests {
 
         assert!(tree.is_ok());
         let tree = tree.unwrap();
-        assert_eq![tree.count_leaves(), 4];
+        assert_eq![tree.count_leaves(), 3];
         assert_eq![tree.get_root(), root];
-    }
-    #[test]
-    fn build_from_five_elements_goes_to_eight() {
-        let tree = MerkleTree::build_from(vec!["1".into(), "2".into(), "3".into(), "4".into(), "5".into()]);
-
-        assert!(tree.is_ok());
-        let tree = tree.unwrap();
-        assert_eq![tree.count_leaves(), 8];
     }
 }
