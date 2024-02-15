@@ -34,6 +34,10 @@ impl MerkleTree {
         self.leaves.extend(new_leaves);
     }
 
+    pub fn contains_leaf(&mut self, _leaf: String) -> Vec<String>{
+        todo!()
+    }
+
     fn get_leaves(array: &[String]) -> Vec<String> {
         let hashes: Vec<String> = array
             .iter()
