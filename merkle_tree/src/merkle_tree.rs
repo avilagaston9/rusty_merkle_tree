@@ -34,8 +34,50 @@ impl MerkleTree {
         self.leaves.extend(new_leaves);
     }
 
-    pub fn contains_leaf(&mut self, _leaf: String) -> Vec<String>{
-        todo!()
+    pub fn contains_leaf(&mut self, leaf: String) -> Option<Vec<String>> {
+        let leaf_hash = Self::calculate_hash(&leaf);
+        if let Some(index) = self.leaves.iter().position(|x| *x == leaf_hash) {
+            let proof = vec![leaf_hash];
+            Some(Self::generate_proof(index, &self.leaves, proof))
+        } else {
+            None
+        }
+    }
+
+    pub fn verify(mut proof: Vec<String>, root: String, mut index: usize) -> bool {
+        let mut value = proof.remove(0);
+        for hash in proof {
+            if index % 2 == 0 {
+                value = Self::calculate_hash((value + hash.as_str()).as_str());
+            } else {
+                value = Self::calculate_hash((hash + value.as_str()).as_str());
+            }
+            index /= 2;
+        }
+        value == root
+    }
+
+    fn generate_proof(leaf_index: usize, leaves: &[String], mut proof: Vec<String>) -> Vec<String> {
+        if leaves.len() == 1 {
+            return proof;
+        }
+
+        let mut parents_array = vec![];
+
+        for chunk in leaves.chunks(2) {
+            parents_array.push(Self::calculate_hash(
+                (chunk[0].to_string() + chunk[1].as_str()).as_str(),
+            ));
+        }
+        let sibling_index = if leaf_index % 2 == 0 {
+            leaf_index + 1
+        } else {
+            leaf_index - 1
+        };
+        proof.push(leaves[sibling_index].clone());
+
+        let new_index = leaf_index / 2;
+        Self::generate_proof(new_index, &parents_array, proof)
     }
 
     fn get_leaves(array: &[String]) -> Vec<String> {
@@ -223,5 +265,35 @@ mod tests {
 
         assert_eq![tree.count_leaves(), 3];
         assert_eq![tree.get_root(), root];
+    }
+    #[test]
+    fn generate_proof() {
+        //manually get the hashes of all inputs
+        let foo_hash = calculate_hash("foo");
+        let bar_hash = calculate_hash("bar");
+        let hello_hash = calculate_hash("hello");
+        let world_hash = calculate_hash("world!");
+
+        //manually get the hashes of the parents
+        let root1 = calculate_hash((foo_hash + bar_hash.as_str()).as_str());
+        let root2 = calculate_hash((hello_hash + world_hash.as_str()).as_str());
+
+        //manually get the root
+        let root = calculate_hash((root1 + root2.as_str()).as_str());
+
+        //build the tree
+        let tree = MerkleTree::build_from(vec![
+            "foo".into(),
+            "bar".into(),
+            "hello".into(),
+            "world!".into(),
+        ]);
+        assert!(tree.is_ok());
+        let mut tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 4];
+        assert_eq![tree.get_root(), root];
+
+        let proof = tree.contains_leaf("hello".into()).unwrap();
+        assert!(MerkleTree::verify(proof, root, 2));
     }
 }
