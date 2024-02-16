@@ -57,6 +57,14 @@ if is_valid {
     println!("Proof verification failed. Leaf does not exist in the Merkle Tree.");
 }
 ```
+
+## Running Tests
+
+To run tests for this Merkle Tree implementation, you can use the provided Makefile. Simply execute the following command:
+
+```sh
+make test
+```
 ## Hash Function
 
 This Merkle Tree implementation utilizes the Keccak256 hash function from the `crypto` crate for hashing leaf nodes and computing the Merkle Tree's internal nodes. Keccak256 is a cryptographic hash function that produces a 256-bit (32-byte) hash value.
