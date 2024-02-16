@@ -34,25 +34,22 @@ impl MerkleTree {
         self.leaves.extend(new_leaves);
     }
 
-    pub fn contains_leaf(&mut self, leaf: String) -> Option<Vec<String>> {
-        let leaf_hash = Self::calculate_hash(&leaf);
+    pub fn contains_leaf(&mut self, leaf_hash: String) -> Option<(Vec<String>, usize)> {
         if let Some(index) = self.leaves.iter().position(|x| *x == leaf_hash) {
-            let proof = vec![leaf_hash];
-            Some(Self::generate_proof(index, &self.leaves, proof))
+            Some((Self::generate_proof(index, &self.leaves, vec![]), index))
         } else {
             None
         }
     }
 
-    pub fn verify(mut proof: Vec<String>, root: String, mut index: usize) -> bool {
-        let mut value = proof.remove(0);
+    pub fn verify(proof: Vec<String>, root: String, mut value: String, mut value_index: usize) -> bool {
         for hash in proof {
-            if index % 2 == 0 {
+            if value_index % 2 == 0 {
                 value = Self::calculate_hash((value + hash.as_str()).as_str());
             } else {
                 value = Self::calculate_hash((hash + value.as_str()).as_str());
             }
-            index /= 2;
+            value_index /= 2;
         }
         value == root
     }
@@ -267,20 +264,20 @@ mod tests {
         assert_eq![tree.get_root(), root];
     }
     #[test]
-    fn generate_proof() {
+    fn generate_proof_even_index() {
         //manually get the hashes of all inputs
         let foo_hash = calculate_hash("foo");
         let bar_hash = calculate_hash("bar");
         let hello_hash = calculate_hash("hello");
         let world_hash = calculate_hash("world!");
-
+    
         //manually get the hashes of the parents
-        let root1 = calculate_hash((foo_hash + bar_hash.as_str()).as_str());
-        let root2 = calculate_hash((hello_hash + world_hash.as_str()).as_str());
-
+        let root1 = calculate_hash((foo_hash.clone() + bar_hash.as_str()).as_str());
+        let root2 = calculate_hash((hello_hash.clone() + world_hash.as_str()).as_str());
+    
         //manually get the root
         let root = calculate_hash((root1 + root2.as_str()).as_str());
-
+    
         //build the tree
         let tree = MerkleTree::build_from(vec![
             "foo".into(),
@@ -288,12 +285,50 @@ mod tests {
             "hello".into(),
             "world!".into(),
         ]);
-        assert!(tree.is_ok());
         let mut tree = tree.unwrap();
         assert_eq![tree.count_leaves(), 4];
         assert_eq![tree.get_root(), root];
-
-        let proof = tree.contains_leaf("hello".into()).unwrap();
-        assert!(MerkleTree::verify(proof, root, 2));
+    
+        let (proof, index) = tree.contains_leaf(hello_hash.clone()).unwrap();
+        assert_eq!(index, 2);
+        assert!(MerkleTree::verify(proof.clone(), root.clone(), hello_hash.clone(), index));
+        assert!(!MerkleTree::verify(proof.clone(), root.clone(), hello_hash, 3));
+        assert!(!MerkleTree::verify(proof.clone(), root.clone(), bar_hash, index));
+        assert!(!MerkleTree::verify(proof.clone(), root.clone(), world_hash, index));
+        assert!(!MerkleTree::verify(proof, root, foo_hash, index));
+    }
+    #[test]
+    fn generate_proof_odd_index() {
+        //manually get the hashes of all inputs
+        let foo_hash = calculate_hash("foo");
+        let bar_hash = calculate_hash("bar");
+        let hello_hash = calculate_hash("hello");
+        let world_hash = calculate_hash("world!");
+    
+        //manually get the hashes of the parents
+        let root1 = calculate_hash((foo_hash.clone() + bar_hash.as_str()).as_str());
+        let root2 = calculate_hash((hello_hash.clone() + world_hash.as_str()).as_str());
+    
+        //manually get the root
+        let root = calculate_hash((root1 + root2.as_str()).as_str());
+    
+        //build the tree
+        let tree = MerkleTree::build_from(vec![
+            "foo".into(),
+            "bar".into(),
+            "hello".into(),
+            "world!".into(),
+        ]);
+        let mut tree = tree.unwrap();
+        assert_eq![tree.count_leaves(), 4];
+        assert_eq![tree.get_root(), root];
+    
+        let (proof, index) = tree.contains_leaf(foo_hash.clone()).unwrap();
+        assert_eq!(index, 0);
+        assert!(MerkleTree::verify(proof.clone(), root.clone(), foo_hash.clone(), index));
+        assert!(!MerkleTree::verify(proof.clone(), root.clone(), foo_hash, 3));
+        assert!(!MerkleTree::verify(proof.clone(), root.clone(), bar_hash, index));
+        assert!(!MerkleTree::verify(proof.clone(), root.clone(), world_hash, index));
+        assert!(!MerkleTree::verify(proof, root, hello_hash, index));
     }
 }
