@@ -424,7 +424,7 @@ mod tests {
         assert!(!MerkleTree::verify(proof, root, hello_hash, index));
     }
     #[test]
-    fn generate_proof_three_leaves_index_two() {
+    fn generate_proof_three_leaves_at_index_two() {
         //manually get the hashes of all inputs
         let foo_hash = calculate_hash("foo");
         let bar_hash = calculate_hash("bar");
