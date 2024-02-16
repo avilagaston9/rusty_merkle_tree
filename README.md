@@ -46,15 +46,19 @@ Example:
 ```rust
 use merkle_tree::MerkleTree;
 
-// Construct the Merkle Tree and generate a proof (previous code)
+// Construct the Merkle Tree (previous code)
 
-// Verify the proof
-let root = merkle_tree.get_root();
-let is_valid = MerkleTree::verify(proof, root, leaf_hash, leaf_index);
-if is_valid {
-    println!("Proof verified successfully. Leaf exists in the Merkle Tree.");
-} else {
-    println!("Proof verification failed. Leaf does not exist in the Merkle Tree.");
+// Generates the proof
+if let (proof, index) = merkle_tree.contains_leaf(leaf1_hash) {
+        
+  // Verify the proof
+  let root = merkle_tree.get_root();
+  let is_valid = MerkleTree::verify(proof, root, leaf_hash, leaf_index);
+  if is_valid {
+      println!("Proof verified successfully. Leaf exists in the Merkle Tree.");
+  } else {
+      println!("Proof verification failed. Leaf does not exist in the Merkle Tree.");
+  }
 }
 ```
 
