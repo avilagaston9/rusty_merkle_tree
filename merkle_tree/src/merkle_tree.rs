@@ -42,7 +42,12 @@ impl MerkleTree {
         }
     }
 
-    pub fn verify(proof: Vec<String>, root: String, mut value: String, mut value_index: usize) -> bool {
+    pub fn verify(
+        proof: Vec<String>,
+        root: String,
+        mut value: String,
+        mut value_index: usize,
+    ) -> bool {
         for hash in proof {
             if value_index % 2 == 0 {
                 value = Self::calculate_hash((value + hash.as_str()).as_str());
@@ -270,14 +275,14 @@ mod tests {
         let bar_hash = calculate_hash("bar");
         let hello_hash = calculate_hash("hello");
         let world_hash = calculate_hash("world!");
-    
+
         //manually get the hashes of the parents
         let root1 = calculate_hash((foo_hash.clone() + bar_hash.as_str()).as_str());
         let root2 = calculate_hash((hello_hash.clone() + world_hash.as_str()).as_str());
-    
+
         //manually get the root
         let root = calculate_hash((root1 + root2.as_str()).as_str());
-    
+
         //build the tree
         let tree = MerkleTree::build_from(vec![
             "foo".into(),
@@ -288,13 +293,33 @@ mod tests {
         let mut tree = tree.unwrap();
         assert_eq![tree.count_leaves(), 4];
         assert_eq![tree.get_root(), root];
-    
+
         let (proof, index) = tree.contains_leaf(hello_hash.clone()).unwrap();
         assert_eq!(index, 2);
-        assert!(MerkleTree::verify(proof.clone(), root.clone(), hello_hash.clone(), index));
-        assert!(!MerkleTree::verify(proof.clone(), root.clone(), hello_hash, 3));
-        assert!(!MerkleTree::verify(proof.clone(), root.clone(), bar_hash, index));
-        assert!(!MerkleTree::verify(proof.clone(), root.clone(), world_hash, index));
+        assert!(MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            hello_hash.clone(),
+            index
+        ));
+        assert!(!MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            hello_hash,
+            3
+        ));
+        assert!(!MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            bar_hash,
+            index
+        ));
+        assert!(!MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            world_hash,
+            index
+        ));
         assert!(!MerkleTree::verify(proof, root, foo_hash, index));
     }
     #[test]
@@ -304,14 +329,14 @@ mod tests {
         let bar_hash = calculate_hash("bar");
         let hello_hash = calculate_hash("hello");
         let world_hash = calculate_hash("world!");
-    
+
         //manually get the hashes of the parents
         let root1 = calculate_hash((foo_hash.clone() + bar_hash.as_str()).as_str());
         let root2 = calculate_hash((hello_hash.clone() + world_hash.as_str()).as_str());
-    
+
         //manually get the root
         let root = calculate_hash((root1 + root2.as_str()).as_str());
-    
+
         //build the tree
         let tree = MerkleTree::build_from(vec![
             "foo".into(),
@@ -322,13 +347,33 @@ mod tests {
         let mut tree = tree.unwrap();
         assert_eq![tree.count_leaves(), 4];
         assert_eq![tree.get_root(), root];
-    
+
         let (proof, index) = tree.contains_leaf(foo_hash.clone()).unwrap();
         assert_eq!(index, 0);
-        assert!(MerkleTree::verify(proof.clone(), root.clone(), foo_hash.clone(), index));
-        assert!(!MerkleTree::verify(proof.clone(), root.clone(), foo_hash, 3));
-        assert!(!MerkleTree::verify(proof.clone(), root.clone(), bar_hash, index));
-        assert!(!MerkleTree::verify(proof.clone(), root.clone(), world_hash, index));
+        assert!(MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            foo_hash.clone(),
+            index
+        ));
+        assert!(!MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            foo_hash,
+            3
+        ));
+        assert!(!MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            bar_hash,
+            index
+        ));
+        assert!(!MerkleTree::verify(
+            proof.clone(),
+            root.clone(),
+            world_hash,
+            index
+        ));
         assert!(!MerkleTree::verify(proof, root, hello_hash, index));
     }
 }
