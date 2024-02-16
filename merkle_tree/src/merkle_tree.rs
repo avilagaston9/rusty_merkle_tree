@@ -34,6 +34,7 @@ impl MerkleTree {
         self.leaves.extend(new_leaves);
     }
 
+    /// Checks if a leaf with the given hash exists in the Merkle tree and returns its proof and index.
     pub fn contains_leaf(&mut self, leaf_hash: String) -> Option<(Vec<String>, usize)> {
         if let Some(index) = self.leaves.iter().position(|x| *x == leaf_hash) {
             Some((
@@ -62,7 +63,6 @@ impl MerkleTree {
         value == root
     }
 
-    /// Checks if a leaf with the given hash exists in the Merkle tree and returns its proof and index.
     fn generate_proof(leaf_index: usize, leaves: &[String], mut proof: Vec<String>) -> Vec<String> {
         if leaves.len() == 1 {
             return proof;
