@@ -67,13 +67,6 @@ impl MerkleTree {
         if leaves.len() == 1 {
             return proof;
         }
-        //build the parents array
-        let mut parents_array = vec![];
-        for chunk in leaves.chunks(2) {
-            parents_array.push(Self::calculate_hash(
-                &[chunk[0], chunk[1]].concat(),
-            ));
-        }
         //get the sibling index of the current leaf
         let sibling_index = if leaf_index % 2 == 0 {
             leaf_index + 1
@@ -81,7 +74,14 @@ impl MerkleTree {
             leaf_index - 1
         };
         //add the sibling to the proof
-        proof.push(leaves[sibling_index].clone());
+        proof.push(leaves[sibling_index]);
+        //build the parents array
+        let mut parents_array = vec![];
+        for chunk in leaves.chunks(2) {
+            parents_array.push(Self::calculate_hash(
+                &[chunk[0], chunk[1]].concat(),
+            ));
+        }
         //get the next iteration index
         let new_index = leaf_index / 2;
         //start next iteration
@@ -101,15 +101,15 @@ impl MerkleTree {
         let mut resized_leaves = leaves.to_owned();
         let mut len = resized_leaves.len();
         while (len & (len - 1)) != 0 {
-            resized_leaves.push(resized_leaves.last().unwrap().clone());
+            resized_leaves.push(*resized_leaves.last().unwrap());
             len = resized_leaves.len();
         }
         resized_leaves
     }   
 
-    fn calculate_root(array: &Vec<[u8;32]>) -> [u8;32] {
+    fn calculate_root(array: &[[u8;32]]) -> [u8;32] {
         if array.len() == 1 {
-            return array.first().unwrap().clone();
+            return *array.first().unwrap();
         }
         //build the parents array
         let mut parents_array = vec![];
